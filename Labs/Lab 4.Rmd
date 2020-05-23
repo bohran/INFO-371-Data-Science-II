@@ -1,0 +1,78 @@
+---
+title: "Lab 4"
+author: "Nicole Bohra"
+date: "2/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("dplyr")
+library("dplyr")
+```
+
+##1.1 Before and After Estimator
+```{r table}
+data <- read.table(file = 'yrbs.tsv', header = TRUE)
+data$before <- data$year < 2006
+mean_before <- mean(data$before == TRUE)
+mean_after <- mean(data$before == FALSE)
+mean_table <- cbind(mean_before, mean_after)
+
+regression1 <- lm(meth~before, data = data, subset = state=='MT')
+summary(regression1)
+
+regression1_controls <- lm(meth~before + age + tv + sex, data = data, subset = state=='MT')
+summary(regression1_controls)
+
+```
+
+> From these regressions, we see that the meth usage in Montana before the campaign is 7.6% and went down 3.8% (0.767 - 0.038) after the campaign.  
+
+##1.2 Cross-Sectional Estimator
+```{r cross}
+mean_MT <- mean(data$state == "MT")
+mean_XX <- mean(data$state == "XX")
+mean_states <- cbind(mean_MT, mean_XX)
+
+regression2_MT <- lm(meth~before, data = data, subset=state=='MT')
+summary(regression2_MT)
+
+regression2_XX <- lm(meth~before, data = data, subset=state=='XX')
+summary(regression2_XX)
+
+regression2_MT_control <- lm(meth~before + age + tv + sex, data = data, subset = state=='MT')
+summary(regression2_MT_control)
+
+regression2_XX_control <- lm(meth~before + age + tv + sex, data = data, subset = state=='XX')
+summary(regression2_XX_control)
+
+
+```
+
+> In comparison to Montana, across the nation the usage of meth before the campaign was about 6%, and after the campaign there was a 4% decrease in meth usage. 
+
+##1.3 5 Differences-in-Differences
+```{r difference}
+MT_before <- data %>% filter(data$state=='MT' & data$before==TRUE)
+MT_before_mean <- mean(MT_before$meth)
+
+MT_after <- data %>% filter(data$state=='MT' & data$before==FALSE)
+MT_after_mean <- mean(MT_after$meth)
+
+XX_before <- data %>% filter(data$state=='XX' & data$before==TRUE)
+XX_before_mean <- mean(XX_before$meth)
+
+XX_after <- data %>% filter(data$state=='XX' & data$before==FALSE)
+XX_after_mean <- mean(XX_after$meth)
+
+difference <- cbind(MT_before_mean, MT_after_mean, XX_before_mean, XX_after_mean)
+
+regression3 <- lm(meth~state * before, data = data)
+summary(regression3)
+
+regression3_controls <- lm(meth~state * before + age + sex + tv, data = data)
+summary(regression3_controls)
+```
+
+>  From the regression we can see that the other control variables don't seem to play a factor in the meth usage in Montana and nationally. All of the data presented in this Before and After test suggest that the campaign dropped meth usage with both states. 

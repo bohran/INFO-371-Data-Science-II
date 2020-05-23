@@ -1,0 +1,53 @@
+---
+title: "Lab 1"
+author: "Nicole Bohra"
+date: "1/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Variance of Normal RV-s
+``` {r variance, echo=TRUE}
+n <- 1000
+norm <- rnorm(n)
+norm
+average <- mean(norm)
+variance_1 <- mean((norm - mean(norm))^2)
+variance_2 <- mean(norm^2) - (average * norm)^2
+variance_3 <- var(norm)
+```
+> I notice a similar value between the first variance and second, shortcut variance equation. The difference between the values was off by 0.02. 
+
+``` {r deviation, echo=TRUE}
+standardDev <- sd(norm)
+lowerBound <- average - (1.96 * standardDev)
+upperBound <- average + (1.96 * standardDev)
+```
+> With this interval, I am 95% confident that the true mean is contained within the lower and upper bounds. 5% of the numbers fall outside of this range. 
+
+``` {r plot, echo=FALSE}
+hist(norm)
+abline(v = average, col = "blue", lwd = 2)
+abline(v = lowerBound, col = "red", lwd = 2)
+abline(v = upperBound, col = "green", lwd = 2)
+```
+
+> The histogram shows a fairly normal distribution with the mean falling at the center of the graph at approximately 0. The lower and upper bounds of the graph encapsulate 95% of the distribution whereas 2.5% is remaining on the left and right tail. 
+
+## Variance of Means
+``` {r sample, echo=TRUE}
+n2<- 3
+m <- 1000
+x <- sapply(1:m, function(s) mean(rnorm(n2)))
+var(x)
+sd(x)
+
+n3 <- 300
+x1 <- sapply(1:m, function(s) mean(rnorm(n3)))
+var(x1)
+sd(x1)   
+```
+> From this experiment, I found that the variance decreased as the sample size increased. This means that the precision of the model increased since there are more samples. As the sample size increased 10x, the standard deviation got 10 times smaller, and when increased by 100x, it decreased by a factor of 100.
