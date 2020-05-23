@@ -1,0 +1,190 @@
+---
+title: "PS-2 Markdown"
+author: "Nicole Bohra"
+date: "1/30/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::kable
+#install.packages("dplyr")
+library(dplyr)
+library(knitr)
+```
+#Part 1: Descriptive Analysis
+
+##1.1 Summary Statistics
+
+```{r stats}
+setwd("/Users/nicolebohra/INFO371/PS-2")
+data <- read.csv("progresa_sample.csv", header = TRUE)
+stat <- subset(data, select = -c(poor, year,folnum, village, progresa))
+mean <- sapply(stat, mean, na.rm=TRUE)
+mean <- round(mean)
+standard_dev <- sapply(stat, sd, na.rm=TRUE)
+missing_values <- colSums(is.na(stat))
+stat_table <- cbind(mean, standard_dev, missing_values)
+stat_table <- data.frame(stat_table)
+stat_table <- stat_table[order(row.names(stat_table)),]
+kable(stat_table)
+pobre_stat <- summary(data$poor)
+pobre_stat
+progresa_stat <- summary(data$progresa)
+progresa_stat
+
+#These levels fit with the documentation above.
+
+```
+
+
+##1.2 Differences at Baseline
+```{r t-test, include=TRUE}
+poor_97 <- data %>% filter(data$year=='97' & data$poor=='pobre') 
+poor_97 <- as.data.frame(poor_97)
+
+with_progresa <- poor_97 %>% filter(progresa=='basal')
+without_progresa <- poor_97 %>% filter(progresa=='0')
+
+with_treatment <- subset(with_progresa, select = c(fam_n, indig, dist_sec, sc, grc, min_dist, dist_cap, hohwag, hohedu, hohage, age, sex, hohsex))
+with_treatment <- sapply(with_treatment, mean, na.rm=TRUE)
+with_treatment <- as.data.frame(with_treatment)
+
+without_treatment <- subset(without_progresa, select = c(fam_n, indig, dist_sec, sc, grc, min_dist, dist_cap, hohwag, hohedu, hohage, age, sex, hohsex))
+without_treatment <- sapply(without_treatment, mean, na.rm=TRUE)
+without_treatment <- as.data.frame(without_treatment)
+
+difference <- (with_treatment - without_treatment)
+difference <- as.data.frame(difference)
+colnames(difference)[1] <- "Difference (treatment - control)"
+
+t_table <- cbind(with_treatment, without_treatment, difference)
+
+p_val <- sapply(row.names(t_table), function(n) t.test(with_progresa[[n]], without_progresa[[n]])$p.value)
+
+t_table <- cbind(with_treatment, without_treatment, difference, p_val)
+colnames(t_table)[1] <- "Average Value (Treatment Villages)"
+colnames(t_table)[2] <- "Average Value (Control Villages)"
+kable(t_table)
+```
+
+##1.3 Interpretation
+> There are some statistically significant differences between treatment and control at baseline, mainly variables including: min_dist, dist_cap, hohwag, hohedu, hohage and sex. It matters if there are differences at baseline because it allows us to explore further if the Progresa treatment did in fact help increase enrollment rates in villages and evaluate its' effectiveness. To measure the impact of the treatment, we have to look at these variables closely and analyze differences to determine if they are signficiant and if Progresa is an effective treatment.
+
+##1.4 Graphical Exploration: Part 1
+```{r hohedu}
+data_97 <- data %>% filter(data$year=='97') 
+data_97 <- subset(data_97, select = c(hohedu, sc97)) 
+grouped_hohedu<- aggregate(data_97, by=list(data_97$hohedu), FUN = mean, na.rm = TRUE)[2:3]
+attach(grouped_hohedu)
+scatterplot <- plot(grouped_hohedu$hohedu, grouped_hohedu$sc97, main = "Average Enrollement vs Head Household Education", xlab = "Education Level", ylab = "Enrollment Rate", pch=19)
+```
+
+> From this graph, I notice that the higher the education level, the higher the enrollment rate is. However, the enrollment rate is still fairly high at about 0.8 for a low household head education level. For the most part, the scatterplot does show a positive, linear relationship between education level and the childrens' enrollment rate in school.
+
+
+##1.5 Graphical Exploration: Part 2
+```{r before}
+poor_before <- data %>% filter(data$poor == 'pobre' & data$year =='97' & data$progresa =="basal") %>% 
+  group_by(village) %>% 
+  summarize(mean(sc, na.rm=TRUE))
+poor_after <- data %>% filter(data$poor =="pobre" & data$year=="98" & data$progresa=="basal") %>% 
+  group_by(village) %>% 
+  summarize(mean(sc, na.rm = TRUE))
+
+colnames(poor_before)[2] <- "mean_before"
+colnames(poor_after)[2] <- "mean_after"
+
+{hist(poor_before$mean_before)
+  abline(v=mean(poor_before$mean_before), col = "blue", lwd =2)}
+
+{hist(poor_after$mean_after)
+  abline(v=mean(poor_after$mean_after), col = "green", lwd =2)}
+
+```
+
+> There appears to be a difference within the enrollment rates before treatment and after treatment in 1997 and 1998, and the difference seems to be significant. The mean enrollment rate before treatment was around ~0.822 and the rate after treatment was around ~0.846. While the difference is fairly small of about 0.02, the average enrollment rate did increase after the Progresa treatment and was statistically significant.
+
+#Part 2: Measuring Impact
+
+##2.1 Cross Sectional Estimator - T-test
+```{r 1998}
+data_98 <- data %>% filter(data$year=='98'& data$poor=='pobre')
+data_98 <- as.data.frame(data_98)
+with_progresa_98 <- data_98 %>% filter(progresa=='basal')
+without_progresa_98 <- data_98 %>% filter(progresa=='0')
+
+with_treatment_98 <- subset(with_progresa_98, select = c(sc))
+with_treatment_98 <- sapply(with_treatment_98, mean, na.rm=TRUE)
+with_treatment_98 <- as.data.frame(with_treatment_98)
+
+without_treatment_98 <- subset(without_progresa_98, select = c(sc))
+without_treatment_98 <- sapply(without_treatment_98, mean, na.rm=TRUE)
+without_treatment_98 <- as.data.frame(without_treatment_98)
+
+difference_98 <- (with_treatment_98 - without_treatment_98)
+difference_98 <- as.data.frame(difference_98)
+colnames(difference_98)[1] <- "Difference (treatment - control)"
+
+table98 <- cbind(with_treatment_98, without_treatment_98, difference_98)
+
+pval_98 <- t.test(with_progresa_98$sc, without_progresa_98$sc)$p.value
+
+table98 <- cbind(with_treatment_98, without_treatment_98, difference_98, pval_98)
+colnames(table98)[1] <- "Average Value (Treatment Villages)"
+colnames(table98)[2] <- "Average Value (Control Villages)"
+kable(table98)
+```
+
+> The p-value is less than 0.05 (essentially almost 0), which is statistically significant and indicates that there is a difference between the means. We can reject the null hypothesis that there is no difference between the enrollment rates between control and treated villages.
+
+##2.2 Cross Sectional Estimator - Regression
+```{r regression}
+enrollment_reg_98 <- lm(sc~progresa, data = data_98)
+summary(enrollment_reg_98)
+```
+
+> Based on this model, the Progresa treatment increases the likelihood of a child enrolling. The Progresa basal rate is positive so the schooling rate is about 3.9% larger than without treatment (the control group). The regression model and the t-test both show the same difference between the average enrollment rate of treatment and control groups. From this regression, we can reject the null hypothesis that there is no difference between the two groups. We can assume from this model that the Progresa treatment is effective in increasing enrollment rates.
+
+
+##2.3 Multiple Regression
+```{r muliple}
+enrollment_reg_controls <- lm(sc~progresa + age + sex + dist_sec + hohedu + welfare_index, data = data_98)
+summary(enrollment_reg_controls)
+```
+
+> The controls increase the point estimate but the standard error decreased. Between 2.2 and 2.3, we can see that with the controls, the Progresa basal treatment increased the school enrollment rate by 3.4% versus the 3.9% increase without the controls.
+
+
+##2.4 Difference-in-Difference: Tabular
+```{r tabular}
+treated_97 <- data %>% filter(data$year=="97" & data$progresa =="basal" & data$poor=="pobre")
+treated_98 <- data %>% filter(data$year=="98" & data$progresa =="basal" & data$poor=="pobre")
+control_97 <- data %>% filter(data$year=="97" & data$progresa =="0" & data$poor=="pobre")
+control_98 <- data %>% filter(data$year=="98" & data$progresa =="0" & data$poor=="pobre")
+mean_97_treatment <- mean(treated_97$sc, na.rm=TRUE)
+mean_98_treatment <- mean(treated_98$sc, na.rm=TRUE)
+mean_97_control <- mean(control_97$sc, na.rm=TRUE)
+mean_98_control <- mean(control_98$sc, na.rm=TRUE)
+
+difference_treatment <- (mean_98_treatment-mean_97_treatment)
+difference_control <- (mean_98_control-mean_97_control)
+
+diff_both <- (mean_98_treatment-mean_98_control) - (mean_97_treatment-mean_97_control)
+
+```
+
+> From computing the treatment effect using the difference-in-differences framework, I see that the difference is positive 0.031, indicating that the average enrollment rate in 1998 (after the treatment) was higher than in 1997 (before the treatment). The difference within just looking at the basal groups in 1997 and 1998 showed a postive value which indicated that the average enrollment rate was up in 1998, after the Progresa treatment. In addition to this, the difference between the control groups saw a negative value, which also indicates that the villages that had the treatment saw higher enrollment rates.
+
+##2.5 Difference-in-Differences: Regression
+```{r control}
+poor <- data %>% filter(data$poor=="pobre")
+diff_regression <- lm(sc~progresa*year + age + sex + dist_sec + hohedu + welfare_index, data = poor)
+summary(diff_regression)
+```
+
+> From computing the difference in differences in the regression model, the average enrollment rates between 1997 and 1998 increased by 3.1% since the progresabasal:year coefficient is 0.0309. This indicates that the Progresa treatment did have an impact on the enrollment rates in 1998 which was after the treatment. The standard error was reduced to 0.006 for progresabasal:year with the controls. We can conclude from this test that there is a difference in the differences in that the post treatment groups had a higher average enrollment rate than the pre treatment groups from 1997.
+
+##2.6 Summary
+
+> Based on the testing and analysis done in this report, I would conclude that Progresa was effective in increasing school enrollment rates. Based on the t-tests and regression models, we can reject the null hypothesis that there is no difference in the average enrollment rate between controlled and treated villages since the p-value for these tests were below 0.05. This indicates that the difference in average enrollment rates was statistically significant and thus concluding that Progresa had a causal impact. From most methods above, the differences before and after Progresa treatment were fairly small, however, they deemed to be statistically significant. All of the methods also showed an increase after Progresa so I believe that for most villages, this program and the treatment seemed to make a difference. 
